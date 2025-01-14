@@ -1,55 +1,45 @@
 import tkinter as tk
+from tkinter import filedialog
 import numpy as np
-import pygame
-from threading import Thread
-from PIL import Image, ImageTk
+import os
 
-def generate_random_audio(sample_rate=44100, duration=1):
-    audio_data = np.random.uniform(-1, 1, int(sample_rate * duration)).astype(np.float32)
-    return audio_data
+def convert_video_to_bytes(path):
+    with open(path, 'rb') as file:
+        return file.read()
 
-def play_sound():
-    sample_rate = 44100
-    pygame.mixer.init(frequency=sample_rate, size=-16, channels=1)
-    while True:
-        sound = generate_random_audio(sample_rate)
-        sound = (sound * 32767).astype(np.int16)  # Приведение к 16-битному формату
-        pygame.mixer.Sound(buffer=sound.tobytes()).play()
-        pygame.time.delay(100)  # Пауза для возможности восприятия звука
+def bytes_to_video(byte_data, duration_minutes):
+    output_path = os.path.join(os.path.expanduser("~"), "Desktop", f"undefined_{duration_minutes}.mp4")
+    with open(output_path, 'wb') as file:
+        file.write(byte_data)
 
-def generate_random_video(width=640, height=480):
-    return np.random.randint(0, 256, (height, width, 3), dtype=np.uint8)
+def select_video_to_bytes():
+    file_path = filedialog.askopenfilename(title="Выберите видео файл")
+    if file_path:
+        byte_data = convert_video_to_bytes(file_path)
+        text_file_path = os.path.join(os.path.expanduser("~"), "Desktop", "video_bytes.txt")
+        with open(text_file_path, 'w') as text_file:
+            text_file.write(str(byte_data))
+        print(f"Байты видео сохранены в: {text_file_path}")
 
-def display_video():
-    video_window = tk.Toplevel()  # Создание нового окна
-    video_window.title("Random Video")
-
-    canvas = tk.Canvas(video_window, width=640, height=480)
-    canvas.pack()
-
-    def update_frame():
-        frame = generate_random_video()
-
-        # Преобразование массива в изображение PIL
-        frame_image = Image.fromarray(frame)
-        frame_image = ImageTk.PhotoImage(frame_image)
-
-        canvas.create_image(0, 0, anchor=tk.NW, image=frame_image)
-        canvas.image = frame_image  # Сохранение ссылки на изображение
-        video_window.after(10, update_frame)  # Непрерывное обновление
-
-    update_frame()
-
-def start_audio_and_video():
-    Thread(target=play_sound, daemon=True).start()  # Запуск звука в отдельном потоке
-    display_video()  # Запуск отображения видео в новом окне
+def select_bytes_to_video():
+    file_path = filedialog.askopenfilename(title="Выберите текстовый файл с байтами")
+    if file_path:
+        with open(file_path, 'r') as text_file:
+            byte_data = eval(text_file.read())  # Преобразование строки в байты
+        duration_minutes = 10  # Задайте длительность видео в минутах
+        bytes_to_video(byte_data, duration_minutes)
+        print(f"Видео создано на рабочем столе с именем: undefined_{duration_minutes}.mp4")
 
 # Создание графического интерфейса
 root = tk.Tk()
-root.title("Procedural Audio and Video Generator")
+root.title("Конвертер видео")
+root.geometry("320x120")  # Установка размера окна
 
-start_button = tk.Button(root, text="Start", command=start_audio_and_video)
-start_button.pack()
+video_to_bytes_button = tk.Button(root, text="Видео в текст", command=select_video_to_bytes)
+video_to_bytes_button.pack(pady=10)
+
+bytes_to_video_button = tk.Button(root, text="Текст в видео", command=select_bytes_to_video)
+bytes_to_video_button.pack(pady=10)
 
 # Запустить основной цикл интерфейса
 root.mainloop()
